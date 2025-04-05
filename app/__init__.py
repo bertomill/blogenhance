@@ -7,8 +7,15 @@ from flask_migrate import Migrate
 import os
 from datetime import datetime
 from sqlalchemy import inspect
+from pathlib import Path
 
-load_dotenv()  # Load environment variables from .env file
+# Load environment variables from .env file if it exists
+env_path = Path('.') / '.env'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    # In production, environment variables might be set directly
+    load_dotenv()  # Try to load from default locations
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
