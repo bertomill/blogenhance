@@ -29,7 +29,7 @@
                     </ul>
                     
                     <div class="mt-auto">
-                        {% if current_user.free_posts_remaining > 0 %}
+                        {% if current_user.free_posts_remaining is not none and current_user.free_posts_remaining > 0 %}
                             <div class="alert alert-info text-center small py-2">
                                 {{ current_user.free_posts_remaining }} free posts remaining
                             </div>
