@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Generated Blog Post{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <div class="col-12">
+            <!-- Success Message -->
+            <div class="alert alert-success mb-4 py-2 px-3" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span>Blog post generated successfully</span>
+                </div>
+            </div>
+            
+            <!-- Actions Bar -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5 class="mb-0">Blog post details</h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" id="viewRawBtn" onclick="toggleRawView()">
+                                <i class="fas fa-code me-1"></i> View Markdown
+                            </button>
+                            <button class="btn btn-sm btn-primary" id="copyBtn" onclick="copyBlogPost()">
+                                <i class="fas fa-copy me-1"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cover Image (if generated) -->
+            {% if cover_image_data and form_data.get('generate_cover') == 'on' %}
+            <div class="card mb-4 border">
+                <div class="card-header py-2 px-3 bg-light">
+                    <h6 class="mb-0">Cover Image</h6>
+                </div>
+                <div class="card-body p-3">
+                    <!-- Display the generated image -->
+                    <div class="text-center mb-3">
+                        <img src="{{ cover_image_data.image_url }}" alt="Generated cover image" class="img-fluid rounded shadow-sm" style="max-width: 100%; max-height: 400px;">
+                    </div>
+                    
+                    <div class="mb-2">
+                        <p class="small text-muted">Prompt used to generate this image:</p>
+                    </div>
+                    
+                    <div class="input-group">
+                        <textarea id="coverPrompt" class="form-control form-control-sm" rows="2" readonly>{{ cover_image_data.sora_prompt }}</textarea>
+                        <button class="btn btn-sm btn-outline-primary" type="button" onclick="copyToClipboard('coverPrompt')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Meme Image (if generated) -->
+            {% if meme_image_data %}
+            <div class="card mb-4 border">
+                <div class="card-header py-2 px-3 bg-light">
+                    <h6 class="mb-0">Meme Prompt</h6>
+                </div>
+                <div class="card-body p-3">
+                    <div class="input-group mb-2">
+                        <textarea id="memePrompt" class="form-control form-control-sm" rows="2" readonly>{{ meme_image_data.sora_prompt }}</textarea>
+                        <button class="btn btn-sm btn-outline-primary" type="button" onclick="copyToClipboard('memePrompt')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Top</span>
+                                <input type="text" class="form-control" value="{{ meme_image_data.meme_top_text }}" readonly>
+                                <button class="btn btn-outline-primary" type="button" onclick="copyToClipboard('memeTopText')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="memeTopText" value="{{ meme_image_data.meme_top_text }}">
+                        </div>
+                        <div class="col-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Bottom</span>
+                                <input type="text" class="form-control" value="{{ meme_image_data.meme_bottom_text }}" readonly>
+                                <button class="btn btn-outline-primary" type="button" onclick="copyToClipboard('memeBottomText')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="memeBottomText" value="{{ meme_image_data.meme_bottom_text }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Blog Post Content -->
+            <div class="card mb-4 border">
+                <div class="card-header py-2 px-3 bg-light">
+                    <h6 class="mb-0">Content</h6>
+                </div>
+                <div class="card-body p-3">
+                    <!-- Formatted blog content (visible by default) -->
+                    <div class="blog-content markdown-content" id="formattedContent">
+                        {{ formatted_blog_post|safe }}
+                    </div>
+                    
+                    <!-- Raw blog content (hidden by default) -->
+                    <div class="blog-content raw-content" id="rawContent" style="display: none;">
+                        <pre class="p-3 bg-light border rounded"><code>{{ blog_post }}</code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Button -->
+            <div class="mb-4">
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Create another post
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Function to copy text to clipboard
+    function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        
+        if (!element) return;
+        
+        // Select the text
+        if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+            element.select();
+        } else {
+            // For non-input elements
+            const range = document.createRange();
+            range.selectNode(element);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+        }
+        
+        // Copy the text
+        document.execCommand('copy');
+        
+        // Deselect the text
+        if (element.tagName !== 'TEXTAREA' && element.tagName !== 'INPUT') {
+            window.getSelection().removeAllRanges();
+        }
+        
+        // Show a tooltip or some indication that the text was copied
+        const button = event.currentTarget;
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-primary');
+        }, 1500);
+    }
+
+    // Function to toggle between raw and formatted views
+    function toggleRawView() {
+        const formattedContent = document.getElementById('formattedContent');
+        const rawContent = document.getElementById('rawContent');
+        const viewRawBtn = document.getElementById('viewRawBtn');
+        
+        if (formattedContent.style.display === 'none') {
+            // Switch to formatted view
+            formattedContent.style.display = 'block';
+            rawContent.style.display = 'none';
+            viewRawBtn.innerHTML = '<i class="fas fa-code me-1"></i> View Markdown';
+        } else {
+            // Switch to raw view
+            formattedContent.style.display = 'none';
+            rawContent.style.display = 'block';
+            viewRawBtn.innerHTML = '<i class="fas fa-file-alt me-1"></i> View Formatted';
+        }
+    }
+    
+    // Function to copy the blog post
+    function copyBlogPost() {
+        // Get the current view (formatted or raw)
+        const isRawVisible = document.getElementById('rawContent').style.display !== 'none';
+        
+        if (isRawVisible) {
+            // Copy raw markdown
+            copyToClipboard('rawContent');
+        } else {
+            // Copy formatted content
+            const formattedContent = document.getElementById('formattedContent');
+            const tempElement = document.createElement('div');
+            tempElement.innerHTML = formattedContent.innerHTML;
+            
+            // Create a temporary element to copy from
+            const tempInput = document.createElement('textarea');
+            tempInput.value = tempElement.innerText;
+            document.body.appendChild(tempInput);
+            
+            // Copy and remove temporary element
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            
+            // Show success indicator
+            const copyBtn = document.getElementById('copyBtn');
+            const originalHTML = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check me-1"></i> Copied!';
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = originalHTML;
+            }, 1500);
+        }
+    }
+</script>
+{% endblock %}

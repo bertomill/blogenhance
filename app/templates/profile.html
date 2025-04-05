@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Your Profile</h3>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('auth.profile') }}">
+                        <div class="mb-4">
+                            <h5>Account Information</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Username:</strong> {{ current_user.username }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Email:</strong> {{ current_user.email }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h5>Personalize Your Blog Writing</h5>
+                            <p class="text-muted">This information will influence the tone and style of your generated blog posts.</p>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label for="personality" class="form-label mb-2">Your Personality:</label>
+                            <div class="mb-2">
+                                <div class="personality-options d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Thoughtful">Thoughtful</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Enthusiastic">Enthusiastic</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Analytical">Analytical</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Creative">Creative</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Practical">Practical</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Humorous">Humorous</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Empathetic">Empathetic</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill personality-option" data-value="Strategic">Strategic</button>
+                                </div>
+                            </div>
+                            <textarea class="form-control" id="personality" name="personality" rows="2" placeholder="Describe your personality traits or customize from selections above">{{ current_user.personality or '' }}</textarea>
+                            <small class="form-text text-muted">How would you describe your personality? This affects the tone of your blog posts.</small>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label for="writing_style" class="form-label mb-2">Preferred Writing Style:</label>
+                            <div class="mb-2">
+                                <div class="writing-style-options d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Conversational">Conversational</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Formal">Formal</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Storytelling">Storytelling</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Technical">Technical</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Persuasive">Persuasive</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Educational">Educational</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Minimalist">Minimalist</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill writing-style-option" data-value="Journalistic">Journalistic</button>
+                                </div>
+                            </div>
+                            <textarea class="form-control" id="writing_style" name="writing_style" rows="2" placeholder="Describe your writing style or customize from selections above">{{ current_user.writing_style or '' }}</textarea>
+                            <small class="form-text text-muted">How do you like to communicate in writing?</small>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label for="expertise" class="form-label mb-2">Areas of Expertise:</label>
+                            <div class="mb-2">
+                                <div class="expertise-options d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Technology">Technology</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Business">Business</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Healthcare">Healthcare</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Education">Education</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Marketing">Marketing</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Design">Design</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Science">Science</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Finance">Finance</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Arts">Arts</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill expertise-option" data-value="Sports">Sports</button>
+                                </div>
+                            </div>
+                            <textarea class="form-control" id="expertise" name="expertise" rows="2" placeholder="List your areas of expertise or customize from selections above">{{ current_user.expertise or '' }}</textarea>
+                            <small class="form-text text-muted">What subjects are you knowledgeable about?</small>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label for="background" class="form-label mb-2">Personal Background:</label>
+                            <div class="mb-2">
+                                <div class="background-options d-flex flex-wrap gap-2 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Software Engineer">Software Engineer</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Entrepreneur">Entrepreneur</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Marketing Professional">Marketing Professional</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Educator">Educator</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Healthcare Provider">Healthcare Provider</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Writer">Writer</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Designer">Designer</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Student">Student</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill background-option" data-value="Consultant">Consultant</button>
+                                </div>
+                            </div>
+                            <textarea class="form-control" id="background" name="background" rows="3" placeholder="Share relevant background info or customize from selections above">{{ current_user.background or '' }}</textarea>
+                            <small class="form-text text-muted">This helps tailor content to your unique perspective.</small>
+                        </div>
+                        
+                        <div class="mb-3 mt-4">
+                            <h5>Social Media Information</h5>
+                            <p class="text-muted">These links will be included at the end of your blog posts in a 'Connect with me' section.</p>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="twitter">Twitter/X:</label>
+                            <input type="url" class="form-control" id="twitter" name="twitter" placeholder="https://twitter.com/yourusername" value="{{ current_user.twitter or '' }}">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="linkedin">LinkedIn:</label>
+                            <input type="url" class="form-control" id="linkedin" name="linkedin" placeholder="https://linkedin.com/in/yourusername" value="{{ current_user.linkedin or '' }}">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="instagram">Instagram:</label>
+                            <input type="url" class="form-control" id="instagram" name="instagram" placeholder="https://instagram.com/yourusername" value="{{ current_user.instagram or '' }}">
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="website">Personal Website/Blog:</label>
+                            <input type="url" class="form-control" id="website" name="website" placeholder="https://yourwebsite.com" value="{{ current_user.website or '' }}">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    /* Pill button styling */
+    .btn-sm.btn-outline-primary.rounded-pill {
+        padding: 0.25rem 0.8rem;
+        margin-bottom: 0.25rem;
+        transition: all 0.2s ease-in-out;
+        border-width: 1.5px;
+        font-size: 0.85rem;
+    }
+    
+    .btn-sm.btn-outline-primary.rounded-pill:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-sm.btn-primary.rounded-pill {
+        padding: 0.25rem 0.8rem;
+        margin-bottom: 0.25rem;
+        transition: all 0.2s ease-in-out;
+        border-width: 1.5px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    /* Options container styling */
+    .personality-options, .writing-style-options, .expertise-options, .background-options {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        border: 1px solid #e9ecef;
+    }
+    
+    /* Form styling */
+    .form-label {
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    /* Card styling */
+    .card {
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card-header {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle pill button selections for personality traits
+        setupPillButtons('personality-option', 'personality');
+        
+        // Handle pill button selections for writing styles
+        setupPillButtons('writing-style-option', 'writing_style');
+        
+        // Handle pill button selections for expertise areas
+        setupPillButtons('expertise-option', 'expertise');
+        
+        // Handle pill button selections for background
+        setupPillButtons('background-option', 'background');
+        
+        // Check existing values to highlight pre-selected buttons
+        highlightExistingSelections();
+        
+        // Function to set up pill button behavior
+        function setupPillButtons(buttonClass, textareaId) {
+            const buttons = document.querySelectorAll('.' + buttonClass);
+            const textarea = document.getElementById(textareaId);
+            
+            buttons.forEach(button => {
+                // Add click event listener
+                button.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    
+                    // Toggle active state
+                    this.classList.toggle('btn-outline-primary');
+                    this.classList.toggle('btn-primary');
+                    
+                    // Get current text
+                    let currentText = textarea.value.trim();
+                    let traits = currentText ? currentText.split(',').map(item => item.trim()) : [];
+                    
+                    // Check if the value is already in the list
+                    const index = traits.findIndex(trait => 
+                        trait.toLowerCase() === value.toLowerCase()
+                    );
+                    
+                    if (index === -1 && this.classList.contains('btn-primary')) {
+                        // Add value if button is active
+                        traits.push(value);
+                    } else if (index !== -1 && !this.classList.contains('btn-primary')) {
+                        // Remove value if button is not active
+                        traits.splice(index, 1);
+                    }
+                    
+                    // Update textarea with new comma-separated list
+                    textarea.value = traits.join(', ');
+                    
+                    // Trigger input event to ensure any validation or dependent fields update
+                    const event = new Event('input', { bubbles: true });
+                    textarea.dispatchEvent(event);
+                });
+            });
+        }
+        
+        // Function to highlight buttons based on existing textarea values
+        function highlightExistingSelections() {
+            highlightButtonsForField('personality-option', 'personality');
+            highlightButtonsForField('writing-style-option', 'writing_style');
+            highlightButtonsForField('expertise-option', 'expertise');
+            highlightButtonsForField('background-option', 'background');
+        }
+        
+        function highlightButtonsForField(buttonClass, textareaId) {
+            const textarea = document.getElementById(textareaId);
+            const buttons = document.querySelectorAll('.' + buttonClass);
+            
+            if (textarea.value) {
+                const values = textarea.value.split(',').map(item => item.trim().toLowerCase());
+                
+                buttons.forEach(button => {
+                    const buttonValue = button.getAttribute('data-value').toLowerCase();
+                    if (values.includes(buttonValue)) {
+                        button.classList.remove('btn-outline-primary');
+                        button.classList.add('btn-primary');
+                    }
+                });
+            }
+        }
+    });
+</script>
+{% endblock %} 

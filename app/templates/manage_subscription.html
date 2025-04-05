@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Subscription - BlogEnhance{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="fw-bold mb-4">Manage Your Subscription</h1>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Current Plan -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Current Plan: {{ plan.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Status:</strong> 
+                                {% if subscription.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif subscription.status == 'trialing' %}
+                                    <span class="badge bg-info">Trial</span>
+                                {% elif subscription.status == 'past_due' %}
+                                    <span class="badge bg-warning">Past Due</span>
+                                {% elif subscription.status == 'canceled' %}
+                                    <span class="badge bg-danger">Canceled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ subscription.status }}</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-1"><strong>Plan:</strong> {{ plan.name }}</p>
+                            <p class="mb-1"><strong>Monthly Price:</strong> ${{ plan.amount / 100 }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Current Period Ends:</strong> {{ subscription.current_period_end.strftime('%B %d, %Y') }}</p>
+                            <p class="mb-1"><strong>Monthly Blog Posts:</strong> 
+                                {% if plan.blog_limit %}
+                                    {{ plan.blog_limit }}
+                                {% else %}
+                                    Unlimited
+                                {% endif %}
+                            </p>
+                            <p class="mb-1"><strong>Remaining This Month:</strong> {{ remaining_posts }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="{{ url_for('payment.plans') }}" class="btn btn-outline-primary">Change Plan</a>
+                        <a href="{{ url_for('payment.portal') }}" class="btn btn-primary">Billing Portal</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Plan Features -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Your Plan Features</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for feature in plan.features %}
+                            <li class="list-group-item px-0">
+                                <i class="fas fa-check text-success me-2"></i> {{ feature }}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Subscription Management -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('payment.portal') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-credit-card me-2"></i> Update Payment Method
+                        </a>
+                        <a href="{{ url_for('payment.portal') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-file-invoice-dollar me-2"></i> View Billing History
+                        </a>
+                        <a href="{{ url_for('payment.portal') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-times-circle me-2"></i> Cancel Subscription
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Need Help? -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <p>If you have any questions about your subscription or need assistance, please contact our support team.</p>
+                    <a href="#" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-envelope me-2"></i> Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FAQ Section -->
+    <div class="mt-5">
+        <h3 class="mb-3">Frequently Asked Questions</h3>
+        
+        <div class="accordion" id="subscriptionFAQ">
+            <div class="accordion-item mb-3 border">
+                <h2 class="accordion-header" id="faqOne">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        How do I upgrade my plan?
+                    </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="faqOne" data-bs-parent="#subscriptionFAQ">
+                    <div class="accordion-body">
+                        To upgrade your plan, click on the "Change Plan" button above and select a new plan. Your account will be charged the prorated amount for the remainder of your current billing cycle.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item mb-3 border">
+                <h2 class="accordion-header" id="faqTwo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                        What happens when I cancel my subscription?
+                    </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="faqTwo" data-bs-parent="#subscriptionFAQ">
+                    <div class="accordion-body">
+                        When you cancel your subscription, your plan will remain active until the end of your current billing period. After that, you'll no longer be able to generate new blog posts, but you'll still have access to your account and previously generated content.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="accordion-item mb-3 border">
+                <h2 class="accordion-header" id="faqThree">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                        How do monthly blog post limits work?
+                    </button>
+                </h2>
+                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="faqThree" data-bs-parent="#subscriptionFAQ">
+                    <div class="accordion-body">
+                        Each plan includes a specific number of blog posts you can generate per month. This limit resets on your billing date each month. If you need more posts, you can upgrade to a higher plan or wait until your next billing cycle.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

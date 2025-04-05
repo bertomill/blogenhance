@@ -1,0 +1,1378 @@
+{% extends "base.html" %}
+
+{% block title %}BlogEnhance{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <div class="col-12">
+            <!-- Minimal header -->
+            <div class="mb-4">
+                <h1 class="mb-2">Create blog post</h1>
+                <p class="text-muted">Generate a personal blog post based on your profile and preferences</p>
+            </div>
+            
+            <!-- Subscription Status Banner -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if current_user.has_active_subscription() %}
+                                {% set plan = current_user.subscription.plan_id %}
+                                <span class="badge bg-success me-2">{{ plan|capitalize }} Plan</span>
+                                {% if plan == 'enterprise' %}
+                                    <span>Unlimited blog posts available</span>
+                                {% else %}
+                                    {% set plan_details = {} %}
+                                    {% if plan == 'basic' %}
+                                        {% set plan_details = {'blog_limit': 5} %}
+                                    {% elif plan == 'pro' %}
+                                        {% set plan_details = {'blog_limit': 15} %}
+                                    {% endif %}
+                                    {% if plan_details %}
+                                        <span>{{ plan_details.blog_limit }} posts per month</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-info me-2">Free Tier</span>
+                                <span>{{ current_user.free_posts_remaining }} free post{{ 's' if current_user.free_posts_remaining != 1 else '' }} remaining</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if not current_user.has_active_subscription() %}
+                                <a href="{{ url_for('payment.plans') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-arrow-circle-up me-1"></i> Upgrade
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('payment.manage') }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-cog me-1"></i> Manage Subscription
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Form -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <form id="blogForm" action="{{ url_for('main.generate') }}" method="POST">
+                        
+                        <!-- Tabs navigation -->
+                        <ul class="nav nav-tabs mb-4" id="blogFormTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="basics-tab" data-bs-toggle="tab" data-bs-target="#basics" type="button" role="tab" aria-controls="basics" aria-selected="true">
+                                    <span class="badge bg-primary rounded-circle me-1">1</span> Basics
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="references-tab" data-bs-toggle="tab" data-bs-target="#references" type="button" role="tab" aria-controls="references" aria-selected="false">
+                                    <span class="badge bg-secondary rounded-circle me-1">2</span> References
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="thoughts-tab" data-bs-toggle="tab" data-bs-target="#thoughts" type="button" role="tab" aria-controls="thoughts" aria-selected="false">
+                                    <span class="badge bg-secondary rounded-circle me-1">3</span> Your Thoughts
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button" role="tab" aria-controls="advanced" aria-selected="false">
+                                    <span class="badge bg-secondary rounded-circle me-1">4</span> Advanced
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <!-- Tabs content -->
+                        <div class="tab-content" id="blogFormTabContent">
+                            <!-- Basics Tab -->
+                            <div class="tab-pane fade show active" id="basics" role="tabpanel" aria-labelledby="basics-tab">
+                                <!-- Blog Topic -->
+                                <div class="mb-3">
+                                    <label for="topic" class="form-label">Topic</label>
+                                    <input type="text" class="form-control" id="topic" name="topic" placeholder="e.g., 'The Future of Remote Work in Tech'" required>
+                                    <div class="form-text small">Be specific about what you want to write about.</div>
+                                </div>
+                                
+                                <!-- Target Audience -->
+                                <div class="mb-3">
+                                    <label for="audience" class="form-label">Target Audience</label>
+                                    <input type="text" class="form-control" id="audience" name="audience" placeholder="e.g., 'Tech professionals interested in remote work'" required>
+                                    <div class="form-text small">Who are you writing for?</div>
+                                </div>
+                                
+                                <!-- Cover Image Option -->
+                                <div class="mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="generate_cover" name="generate_cover">
+                                        <label class="form-check-label" for="generate_cover">
+                                            Generate cover image prompt
+                                        </label>
+                                        <div class="form-text small">Creates a prompt for generating a custom cover image.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- References Tab -->
+                            <div class="tab-pane fade" id="references" role="tabpanel" aria-labelledby="references-tab">
+                                <!-- Reference Materials -->
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <label class="form-label">Reference Materials</label>
+                                        <button type="button" id="addReferenceBtn" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-plus me-1"></i> Add Reference
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="referenceContainer">
+                                        <div class="reference-item card mb-3 border">
+                                            <div class="card-body p-3">
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Title</label>
+                                                    <input type="text" class="form-control form-control-sm reference-title" name="reference_title[]" placeholder="Article title">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Link (Optional)</label>
+                                                    <input type="url" class="form-control form-control-sm reference-link" name="reference_link[]" placeholder="https://example.com/article">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label small">Content</label>
+                                                    <textarea class="form-control form-control-sm reference-content" name="reference_content[]" rows="3" placeholder="Paste relevant content here"></textarea>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger remove-reference">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text small">Add articles or other reference materials to enhance your blog content.</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Your Thoughts Tab -->
+                            <div class="tab-pane fade" id="thoughts" role="tabpanel" aria-labelledby="thoughts-tab">
+                                <!-- Your Thoughts Section -->
+                                <div class="mb-4">
+                                    <label for="user_thoughts" class="form-label">Your Thoughts</label>
+                                    <textarea class="form-control" id="user_thoughts" name="user_thoughts" rows="8" placeholder="Share your personal thoughts, opinions, or experiences about this topic"></textarea>
+                                    <div class="form-text small">Add your personal perspective to guide the tone and content of your blog post.</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Advanced Tab -->
+                            <div class="tab-pane fade" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
+                                <!-- User Context Card -->
+                                {% if current_user.is_authenticated %}
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user me-2"></i>
+                                            <span>User Profile Context</span>
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary me-2" type="button" id="saveProfileBtn">
+                                                <i class="fas fa-save"></i> Save Changes
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" id="toggleUserContextBtn" data-bs-toggle="collapse" data-bs-target="#userContextCollapse">
+                                                <span>Toggle</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="collapse show" id="userContextCollapse">
+                                        <div class="card border bg-light">
+                                            <div class="card-body p-3">
+                                                <form id="inlineProfileForm">
+                                                    <div class="mb-2">
+                                                        <label class="form-label small fw-medium">Personality:</label>
+                                                        <input type="text" class="form-control form-control-sm profile-field" id="inline-personality" name="personality" value="{{ current_user.personality or '' }}" placeholder="e.g., Thoughtful, Enthusiastic, Analytical">
+                                                    </div>
+                                                    
+                                                    <div class="mb-2">
+                                                        <label class="form-label small fw-medium">Writing Style:</label>
+                                                        <input type="text" class="form-control form-control-sm profile-field" id="inline-writing_style" name="writing_style" value="{{ current_user.writing_style or '' }}" placeholder="e.g., Conversational, Technical, Storytelling">
+                                                    </div>
+                                                    
+                                                    <div class="mb-2">
+                                                        <label class="form-label small fw-medium">Expertise:</label>
+                                                        <input type="text" class="form-control form-control-sm profile-field" id="inline-expertise" name="expertise" value="{{ current_user.expertise or '' }}" placeholder="e.g., AI, Marketing, Education">
+                                                    </div>
+                                                    
+                                                    <div class="mb-2">
+                                                        <label class="form-label small fw-medium">Background:</label>
+                                                        <input type="text" class="form-control form-control-sm profile-field" id="inline-background" name="background" value="{{ current_user.background or '' }}" placeholder="e.g., Software Engineer, Entrepreneur">
+                                                    </div>
+                                                    
+                                                    <!-- Social Media -->
+                                                    {% if current_user.twitter or current_user.linkedin or current_user.instagram or current_user.website %}
+                                                    <div class="mt-2 small">
+                                                        <span class="fw-medium">Social Media:</span> Will be included in "Connect with me" section
+                                                        <a href="{{ url_for('auth.profile') }}" class="ms-2 text-primary small">
+                                                            <i class="fas fa-external-link-alt"></i> Edit social links
+                                                        </a>
+                                                    </div>
+                                                    {% endif %}
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text small">These profile details influence how your blog posts are written. Changes made here will affect this post only.</div>
+                                </div>
+                                
+                                <!-- User Data Variables -->
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-code-branch me-2"></i>
+                                            <span>User Data Passed to Model</span>
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" id="toggleUserDataBtn" data-bs-toggle="collapse" data-bs-target="#userDataCollapse">
+                                                <span>Toggle</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="collapse" id="userDataCollapse">
+                                        <div class="card border">
+                                            <div class="card-body p-3">
+                                                <pre class="json-code p-3 mb-0" style="background-color: #f8f9fa; border-radius: 0.375rem; font-size: 0.8rem; overflow-x: auto; max-height: 200px;">
+<code id="userDataJson"></code>
+</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text small">This shows the exact data variables passed from your profile to the AI model.</div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Prompt Template Editor -->
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-code me-2"></i>
+                                            <span>Show prompt template</span>
+                                        </div>
+                                        <div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary copy-btn me-2" id="copyPromptBtn" style="display: none;">
+                                                <i class="fas fa-copy"></i> Copy
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" id="togglePromptBtn" data-bs-toggle="collapse" data-bs-target="#promptPreviewCollapse">
+                                                <span>Toggle</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="collapse" id="promptPreviewCollapse">
+                                        <div class="card border">
+                                            <div class="card-body p-0">
+                                                <textarea class="prompt-template form-control border-0 p-3" 
+                                                          style="max-height: 300px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; background-color: #f8f9fa;" 
+                                                          id="promptPreview" name="custom_prompt">Fill out the form fields to see the customizable prompt template.</textarea>
+                                                <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">Edit this template to customize how your blog is generated</small>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" id="resetPromptBtn">
+                                                        <i class="fas fa-undo"></i> Reset to Default
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-text small">Customize the instructions that will be sent to the AI model.</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-3">
+                        
+                        <!-- Progress Status Section (hidden by default) -->
+                        <div id="progressSection" class="my-3" style="display: none;">
+                            <div class="card border">
+                                <div class="card-body p-3">
+                                    <h6 class="card-title"><i class="fas fa-spinner fa-spin me-2"></i>Creating Your Blog Post</h6>
+                                    
+                                    <!-- Progress Bar -->
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" 
+                                             style="width: 0%"></div>
+                                    </div>
+                                    
+                                    <!-- Status Messages -->
+                                    <div id="statusMessages" class="mt-2 small">
+                                        <div class="status-message">
+                                            <i class="fas fa-hourglass-start text-primary me-2"></i>
+                                            <span>Waiting to begin generation...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation Buttons for Tabs -->
+                        <div id="tab-navigation" class="mt-4">
+                            <!-- Basics Tab Navigation -->
+                            <div class="d-flex justify-content-end" id="basics-nav">
+                                <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" id="basics-next-btn">
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">Next</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <!-- References Tab Navigation -->
+                            <div class="d-none justify-content-between" id="references-nav">
+                                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" id="references-prev-btn">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-arrow-left me-2"></i>
+                                        <span>Back</span>
+                                    </div>
+                                </button>
+                                <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" id="references-next-btn">
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">Next</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <!-- Thoughts Tab Navigation -->
+                            <div class="d-none justify-content-between" id="thoughts-nav">
+                                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" id="thoughts-prev-btn">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-arrow-left me-2"></i>
+                                        <span>Back</span>
+                                    </div>
+                                </button>
+                                <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" id="thoughts-next-btn">
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">Next</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <!-- Advanced Tab Navigation -->
+                            <div class="d-none justify-content-between" id="advanced-nav">
+                                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" id="advanced-prev-btn">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-arrow-left me-2"></i>
+                                        <span>Back</span>
+                                    </div>
+                                </button>
+                                <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" id="advanced-generate-btn">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-magic me-2"></i>
+                                        <span>Generate Blog Post</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Original Generate Button (hidden) -->
+                        <div class="d-none">
+                            <button type="submit" class="btn btn-primary" id="generate-btn">
+                                <i class="fas fa-magic me-2"></i>Generate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for AJAX form submission and progress tracking -->
+{% block scripts %}
+<div id="userData" 
+    data-personality="{{ current_user.personality|default('', true) }}" 
+    data-writing-style="{{ current_user.writing_style|default('', true) }}" 
+    data-expertise="{{ current_user.expertise|default('', true) }}" 
+    data-background="{{ current_user.background|default('', true) }}" 
+    data-has-social-media="{% if current_user.twitter or current_user.linkedin or current_user.instagram or current_user.website %}true{% else %}false{% endif %}"
+    style="display: none;">
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get user data from data attributes
+        const userDataEl = document.getElementById('userData');
+        const userPersonality = userDataEl ? userDataEl.getAttribute('data-personality') : "";
+        const userWritingStyle = userDataEl ? userDataEl.getAttribute('data-writing-style') : "";
+        const userExpertise = userDataEl ? userDataEl.getAttribute('data-expertise') : "";
+        const userBackground = userDataEl ? userDataEl.getAttribute('data-background') : "";
+        const userHasSocialMedia = userDataEl ? userDataEl.getAttribute('data-has-social-media') === 'true' : false;
+        
+        // Ensure Bootstrap is loaded
+        if (typeof bootstrap === 'undefined') {
+            console.error('Bootstrap is not loaded properly!');
+            alert('There was an error loading the page. Please refresh and try again.');
+            return;
+        }
+        
+        // Debug Bootstrap Tab plugin
+        console.log('Bootstrap Tab available:', typeof bootstrap.Tab !== 'undefined');
+        
+        const form = document.getElementById('blogForm');
+        const generateButton = document.getElementById('generate-btn');
+        const progressSection = document.getElementById('progressSection');
+        const progressBar = document.getElementById('progressBar');
+        const statusMessages = document.getElementById('statusMessages');
+        const addReferenceBtn = document.getElementById('addReferenceBtn');
+        const referenceContainer = document.getElementById('referenceContainer');
+        
+        // Tab navigation elements
+        const basicsTab = document.getElementById('basics-tab');
+        const referencesTab = document.getElementById('references-tab');
+        const thoughtsTab = document.getElementById('thoughts-tab');
+        const advancedTab = document.getElementById('advanced-tab');
+        
+        // Tab content elements
+        const basicsPane = document.getElementById('basics');
+        const referencesPane = document.getElementById('references');
+        const thoughtsPane = document.getElementById('thoughts');
+        const advancedPane = document.getElementById('advanced');
+        
+        // Navigation buttons
+        const basicsNextBtn = document.getElementById('basics-next-btn');
+        const referencesNextBtn = document.getElementById('references-next-btn');
+        const thoughtsNextBtn = document.getElementById('thoughts-next-btn');
+        const advancedGenerateBtn = document.getElementById('advanced-generate-btn');
+        
+        // Navigation containers
+        const basicsNav = document.getElementById('basics-nav');
+        const referencesNav = document.getElementById('references-nav');
+        const thoughtsNav = document.getElementById('thoughts-nav');
+        const advancedNav = document.getElementById('advanced-nav');
+        
+        // Prompt preview elements
+        const togglePromptBtn = document.getElementById('togglePromptBtn');
+        const promptPreviewCollapse = document.getElementById('promptPreviewCollapse');
+        const promptPreview = document.getElementById('promptPreview');
+        const copyPromptBtn = document.getElementById('copyPromptBtn');
+        
+        // Profile context toggle
+        const toggleUserContextBtn = document.getElementById('toggleUserContextBtn');
+        const userContextCollapse = document.getElementById('userContextCollapse');
+        
+        // User data toggle and content
+        const toggleUserDataBtn = document.getElementById('toggleUserDataBtn');
+        const userDataCollapse = document.getElementById('userDataCollapse');
+        const userDataJson = document.getElementById('userDataJson');
+        
+        // Inline profile editing elements
+        const saveProfileBtn = document.getElementById('saveProfileBtn');
+        const profileFields = document.querySelectorAll('.profile-field');
+        
+        // Initialize Bootstrap collapse objects
+        const userContextCollapseInstance = userContextCollapse ? new bootstrap.Collapse(userContextCollapse, { toggle: false }) : null;
+        const promptCollapseInstance = promptPreviewCollapse ? new bootstrap.Collapse(promptPreviewCollapse, { toggle: false }) : null;
+        const userDataCollapseInstance = userDataCollapse ? new bootstrap.Collapse(userDataCollapse, { toggle: false }) : null;
+        
+        // Populate user data JSON display
+        if (userDataJson) {
+            const userData = {
+                personality: userPersonality || null,
+                writing_style: userWritingStyle || null,
+                expertise: userExpertise || null,
+                background: userBackground || null,
+                has_social_media: userHasSocialMedia
+            };
+            userDataJson.innerHTML = syntaxHighlightJson(JSON.stringify(userData, null, 2));
+        }
+        
+        // Handle inline profile updates
+        if (profileFields.length > 0) {
+            // Update user data when fields change
+            profileFields.forEach(field => {
+                field.addEventListener('input', function() {
+                    const fieldName = field.name;
+                    const fieldValue = field.value;
+                    
+                    // Update the userDataEl attribute
+                    if (userDataEl) {
+                        userDataEl.setAttribute(`data-${fieldName.replace('_', '-')}`, fieldValue);
+                        
+                        // Update the global variables
+                        if (fieldName === 'personality') userPersonality = fieldValue;
+                        if (fieldName === 'writing_style') userWritingStyle = fieldValue;
+                        if (fieldName === 'expertise') userExpertise = fieldValue;
+                        if (fieldName === 'background') userBackground = fieldValue;
+                        
+                        // Refresh user data display
+                        updateUserDataDisplay();
+                        
+                        // Also update prompt preview if it's open
+                        if (promptPreviewCollapse && promptPreviewCollapse.classList.contains('show')) {
+                            updatePromptPreview();
+                        }
+                    }
+                });
+            });
+            
+            // Handle save button click (for future server-side saving)
+            if (saveProfileBtn) {
+                saveProfileBtn.addEventListener('click', function() {
+                    // Show a success message
+                    const profileForm = document.getElementById('inlineProfileForm');
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'alert alert-success mt-2 p-2';
+                    successMessage.style.fontSize = '0.8rem';
+                    successMessage.innerHTML = '<i class="fas fa-check-circle me-1"></i> Profile updated for this post.';
+                    
+                    // Add the message after the form
+                    profileForm.after(successMessage);
+                    
+                    // Remove after 3 seconds
+                    setTimeout(() => {
+                        successMessage.remove();
+                    }, 3000);
+                });
+            }
+        }
+        
+        // Function to update the user data display
+        function updateUserDataDisplay() {
+            if (userDataJson) {
+                const userData = {
+                    personality: userPersonality || null,
+                    writing_style: userWritingStyle || null,
+                    expertise: userExpertise || null,
+                    background: userBackground || null,
+                    has_social_media: userHasSocialMedia
+                };
+                userDataJson.innerHTML = syntaxHighlightJson(JSON.stringify(userData, null, 2));
+            }
+        }
+        
+        // Initial user data display
+        updateUserDataDisplay();
+        
+        // Show/hide user context
+        if (toggleUserContextBtn) {
+            toggleUserContextBtn.addEventListener('click', function() {
+                // Toggle collapse state
+                if (userContextCollapse.classList.contains('show')) {
+                    userContextCollapseInstance.hide();
+                } else {
+                    userContextCollapseInstance.show();
+                }
+            });
+        }
+        
+        // Show/hide user data
+        if (toggleUserDataBtn) {
+            toggleUserDataBtn.addEventListener('click', function() {
+                // Toggle collapse state
+                if (userDataCollapse.classList.contains('show')) {
+                    userDataCollapseInstance.hide();
+                } else {
+                    userDataCollapseInstance.show();
+                }
+            });
+        }
+        
+        // Show/hide prompt template
+        if (togglePromptBtn) {
+            togglePromptBtn.addEventListener('click', function() {
+                // Toggle collapse state
+                if (promptPreviewCollapse.classList.contains('show')) {
+                    promptCollapseInstance.hide();
+                    // Hide copy button when prompt is hidden
+                    if (copyPromptBtn) {
+                        copyPromptBtn.style.display = 'none';
+                    }
+                } else {
+                    // Update the prompt preview
+                    updatePromptPreview();
+                    promptCollapseInstance.show();
+                    // Show copy button when prompt is shown
+                    if (copyPromptBtn) {
+                        copyPromptBtn.style.display = 'inline-block';
+                    }
+                }
+            });
+        }
+        
+        // Reset prompt template to default
+        const resetPromptBtn = document.getElementById('resetPromptBtn');
+        if (resetPromptBtn) {
+            resetPromptBtn.addEventListener('click', function() {
+                // Confirm before resetting
+                if (confirm('Reset to default prompt template? Your changes will be lost.')) {
+                    updatePromptPreview();
+                }
+            });
+        }
+        
+        // Copy prompt to clipboard
+        if (copyPromptBtn) {
+            copyPromptBtn.addEventListener('click', function() {
+                const promptText = promptPreview.value || promptPreview.textContent;
+                navigator.clipboard.writeText(promptText)
+                    .then(() => {
+                        // Show copied feedback
+                        const originalText = copyPromptBtn.innerHTML;
+                        copyPromptBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => {
+                            copyPromptBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                    });
+            });
+        }
+        
+        // Update prompt preview when form fields change
+        const formInputs = document.querySelectorAll('#topic, #audience, #user_thoughts, textarea.reference-content, input.reference-title, input.reference-link');
+        formInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                if (promptPreviewCollapse && promptPreviewCollapse.classList.contains('show')) {
+                    updatePromptPreview();
+                }
+            });
+        });
+        
+        // Delegate event to also handle dynamically added reference fields
+        if (referenceContainer) {
+            referenceContainer.addEventListener('input', function(e) {
+                if (e.target.classList.contains('reference-content') || 
+                    e.target.classList.contains('reference-title') || 
+                    e.target.classList.contains('reference-link')) {
+                    if (promptPreviewCollapse && promptPreviewCollapse.classList.contains('show')) {
+                        updatePromptPreview();
+                    }
+                }
+            });
+        }
+        
+        // Function to update the prompt preview
+        function updatePromptPreview() {
+            const topic = document.getElementById('topic').value || '[Topic]';
+            const audience = document.getElementById('audience').value || '[Audience]';
+            const userThoughts = document.getElementById('user_thoughts').value || 'No personal thoughts provided.';
+            
+            // Collect reference materials
+            let referenceItems = referenceContainer.querySelectorAll('.reference-item');
+            let formattedReferences = '';
+            
+            if (referenceItems.length > 0) {
+                Array.from(referenceItems).forEach((item, index) => {
+                    const title = item.querySelector('.reference-title').value || '[Title]';
+                    const link = item.querySelector('.reference-link').value || '';
+                    const content = item.querySelector('.reference-content').value || '[Content]';
+                    
+                    formattedReferences += `\nReference ${index+1}:\n`;
+                    formattedReferences += `Title: ${title}\n`;
+                    if (link) {
+                        formattedReferences += `Link: ${link}\n`;
+                    }
+                    formattedReferences += `Content: ${content}\n\n`;
+                });
+            } else {
+                formattedReferences = 'No reference materials provided.';
+            }
+            
+            // User context/tone instructions
+            let toneInstructions = 'Write in a personal, conversational tone.';
+            
+            // Use the user context information stored in JavaScript variables
+            if (userPersonality || userWritingStyle || userExpertise || userBackground) {
+                toneInstructions = '';
+                if (userPersonality) {
+                    toneInstructions += `Personality: ${userPersonality}\n`;
+                }
+                if (userWritingStyle) {
+                    toneInstructions += `Writing Style: ${userWritingStyle}\n`;
+                }
+                if (userExpertise) {
+                    toneInstructions += `Expertise: ${userExpertise}\n`;
+                }
+                if (userBackground) {
+                    toneInstructions += `Background: ${userBackground}\n`;
+                }
+                
+                if (!toneInstructions) {
+                    toneInstructions = 'Write in a personal, conversational tone.';
+                }
+            }
+            
+            // Create a user-editable prompt template
+            const promptTemplate = `You are a thoughtful blogger who writes engaging, personal content from a first-person perspective. Your task is to craft a blog post that feels like you're sharing your own thoughts and experiences about the topic, while drawing on the provided reference materials for insight.
+
+Topic: ${topic}
+Target Audience: ${audience}
+
+Reference Materials:
+${formattedReferences}
+
+Your Thoughts:
+${userThoughts}
+
+Tone Instructions:
+${toneInstructions}
+
+When creating content, follow these guidelines:
+
+1. VOICE & TONE:
+   - Write in first-person perspective (using "I", "my", "me")
+   - Share personal opinions, reflections, and hypothetical experiences
+   - Use a conversational, authentic tone as if you're talking to a friend
+   - Express enthusiasm about the topic while maintaining credibility
+   - Include relatable anecdotes or scenarios
+   - Incorporate the user's thoughts and perspectives throughout
+
+2. STRUCTURE & FORMAT:
+   - Begin with a personal hook or story related to the topic
+   - Create 3-5 main content sections with descriptive subheadings
+   - Keep paragraphs short (2-3 sentences) for better readability
+   - End with a personal conclusion and reflection
+   - Include a gentle call-to-action that invites readers to share their thoughts
+   - End with "Thank you for listening! To learn more, please contact me on X [link to X profile]" and any other social media links
+
+3. CONTENT QUALITY:
+   - Draw insights from the reference materials but present them as your own discoveries
+   - Share what you've "learned" in your exploration of the topic
+   - Target a 7th-8th grade reading level for maximum accessibility
+   - Support your opinions with relevant information from the references
+   - Anticipate and address reader questions from your perspective
+   - Avoid formal, academic language - keep it personal
+
+4. SEO OPTIMIZATION:
+   - Naturally incorporate the primary keyword in the introduction, conclusion, and at least one heading
+   - Use related secondary keywords and semantic variations throughout
+   - Reference external sources in a natural way, as things you've discovered
+   - DO NOT include separate sections for meta description or linking opportunities
+
+5. ENGAGEMENT ELEMENTS:
+   - Include personal questions you've asked yourself about the topic
+   - Suggest personal experiences readers might relate to
+   - Incorporate bulleted or numbered lists when sharing "your tips" or insights
+   - Use phrases like "In my experience," "I've found that," "I believe," etc.
+   - Add personal takeaways or "aha moments"
+   
+6. Use Markdown format for the content with # for main headings, ## for subheadings, etc.
+
+7. Make sure the blog post reads like a personal reflection or opinion piece rather than an informational article. Start with an engaging personal title and dive right into the content without including any meta description or linking sections.`;
+            
+            // Set the template as the value of the textarea
+            promptPreview.value = promptTemplate;
+        }
+        
+        // Reference materials handling
+        if (addReferenceBtn) {
+            addReferenceBtn.addEventListener('click', function() {
+                addReferenceField();
+                updateRemoveButtons();
+                if (promptPreviewCollapse && promptPreviewCollapse.classList.contains('show')) {
+                    updatePromptPreview();
+                }
+            });
+            
+            // Initial setup for existing reference fields
+            updateRemoveButtons();
+            
+            // Delegate event listener for remove buttons
+            referenceContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-reference') || e.target.closest('.remove-reference')) {
+                    const button = e.target.classList.contains('remove-reference') ? 
+                        e.target : e.target.closest('.remove-reference');
+                    const referenceItem = button.closest('.reference-item');
+                    if (referenceItem) {
+                        referenceItem.remove();
+                        updateRemoveButtons();
+                        if (promptPreviewCollapse && promptPreviewCollapse.classList.contains('show')) {
+                            updatePromptPreview();
+                        }
+                    }
+                }
+            });
+        }
+        
+        function addReferenceField() {
+            const referenceTemplate = `
+                <div class="reference-item card mb-3 border">
+                    <div class="card-body p-3">
+                        <div class="mb-2">
+                            <label class="form-label small">Title</label>
+                            <input type="text" class="form-control form-control-sm reference-title" name="reference_title[]" placeholder="Article title">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Link (Optional)</label>
+                            <input type="url" class="form-control form-control-sm reference-link" name="reference_link[]" placeholder="https://example.com/article">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Content</label>
+                            <textarea class="form-control form-control-sm reference-content" name="reference_content[]" rows="3" placeholder="Paste relevant content here"></textarea>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-reference">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            referenceContainer.insertAdjacentHTML('beforeend', referenceTemplate);
+        }
+        
+        function updateRemoveButtons() {
+            const referenceItems = referenceContainer.querySelectorAll('.reference-item');
+            const removeButtons = referenceContainer.querySelectorAll('.remove-reference');
+            
+            // Only show remove buttons if there's more than one reference
+            removeButtons.forEach(button => {
+                button.style.display = referenceItems.length > 1 ? 'inline-block' : 'none';
+            });
+        }
+        
+        // Status message map with their progress percentages
+        const statusSteps = [
+            { message: "Analyzing your topic...", progress: 10, icon: "fas fa-search" },
+            { message: "Researching key points...", progress: 20, icon: "fas fa-book" },
+            { message: "Outlining the blog structure...", progress: 30, icon: "fas fa-list" },
+            { message: "Drafting the content...", progress: 50, icon: "fas fa-pencil-alt" },
+            { message: "Adding supporting details...", progress: 65, icon: "fas fa-puzzle-piece" },
+            { message: "Optimizing for SEO...", progress: 75, icon: "fas fa-chart-line" },
+            { message: "Polishing the final text...", progress: 85, icon: "fas fa-feather" }
+        ];
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show progress section and disable the generate button
+                progressSection.style.display = 'block';
+                generateButton.disabled = true;
+                generateButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generating...';
+                
+                // Prepare form data
+                const formData = new FormData(form);
+                
+                // Add custom prompt if modified by user
+                if (promptPreview && promptPreviewCollapse && promptPreviewCollapse.classList.contains('show')) {
+                    formData.set('custom_prompt', promptPreview.value);
+                }
+                
+                // Start the generation process
+                startGenerationProcess(formData);
+            });
+        }
+        
+        function startGenerationProcess(formData) {
+            // Simulate progress updates (in a real implementation, this would use server-sent events or polling)
+            let currentStep = 0;
+            
+            // Show the first step
+            updateProgress(statusSteps[0], true);
+            
+            // Simulate progress through different steps
+            const progressInterval = setInterval(function() {
+                if (currentStep < statusSteps.length - 1) {
+                    currentStep++;
+                    
+                    // Check if the message already exists in the status messages
+                    const existingMessages = Array.from(statusMessages.querySelectorAll('.status-message span')).map(el => el.textContent);
+                    const isDuplicate = existingMessages.includes(statusSteps[currentStep].message);
+                    
+                    // Only add the message if it's not a duplicate
+                    updateProgress(statusSteps[currentStep], !isDuplicate);
+                } else {
+                    clearInterval(progressInterval);
+                    
+                    // Final step - handle actual form submission
+                    const finalStep = {
+                        message: "Finalizing your blog post...",
+                        progress: 95,
+                        icon: "fas fa-check-circle"
+                    };
+                    
+                    // Check if this message already exists
+                    const existingMessages = Array.from(statusMessages.querySelectorAll('.status-message span')).map(el => el.textContent);
+                    const isDuplicate = existingMessages.includes(finalStep.message);
+                    
+                    // Only add the message if it's not a duplicate
+                    updateProgress(finalStep, !isDuplicate);
+                    
+                    // Submit the form traditionally after all progress steps
+                    setTimeout(function() {
+                        // Actual form submission
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', form.action, true);
+                        xhr.onload = function() {
+                            if (xhr.status === 200) {
+                                // If it returns HTML, we replace the page content
+                                document.open();
+                                document.write(xhr.responseText);
+                                document.close();
+                            } else {
+                                // Handle error
+                                showError("There was an error generating your blog post. Please try again.");
+                                resetForm();
+                            }
+                        };
+                        xhr.onerror = function() {
+                            showError("Network error. Please check your connection and try again.");
+                            resetForm();
+                        };
+                        xhr.send(formData);
+                    }, 1000);
+                }
+            }, 2000); // Update progress every 2 seconds
+        }
+        
+        function updateProgress(step, addToList) {
+            // Update progress bar
+            progressBar.style.width = step.progress + '%';
+            progressBar.setAttribute('aria-valuenow', step.progress);
+            progressBar.textContent = step.progress + '%';
+            
+            // Add new status message to the list if requested
+            if (addToList) {
+                const messageHTML = `
+                    <div class="status-message mt-2">
+                        <i class="${step.icon} text-primary me-2"></i>
+                        <span>${step.message}</span>
+                    </div>
+                `;
+                statusMessages.insertAdjacentHTML('beforeend', messageHTML);
+                
+                // Scroll to the latest message
+                statusMessages.scrollTop = statusMessages.scrollHeight;
+            }
+        }
+        
+        function showError(message) {
+            // Show error message
+            const errorHTML = `
+                <div class="alert alert-danger mt-3" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    ${message}
+                </div>
+            `;
+            progressSection.insertAdjacentHTML('beforeend', errorHTML);
+        }
+        
+        function resetForm() {
+            // Re-enable the generate button
+            generateButton.disabled = false;
+            generateButton.innerHTML = '<i class="fas fa-magic me-2"></i> Generate';
+        }
+
+        // Simple syntax highlighting for JSON
+        function syntaxHighlightJson(json) {
+            if (!json) return '';
+            
+            // Replace double quotes with styled spans
+            json = json.replace(/"([^"]+)":/g, '<span class="json-key">"$1":</span>');
+            
+            // Highlight booleans and numbers
+            json = json.replace(/\b(true|false)\b/g, '<span class="json-boolean">$1</span>');
+            json = json.replace(/\b(\d+)\b/g, '<span class="json-number">$1</span>');
+            
+            // Highlight strings (but not the ones we already highlighted as keys)
+            json = json.replace(/"([^"]*)"/g, function(match) {
+                if (match.includes('json-key')) return match;
+                return '<span class="json-string">' + match + '</span>';
+            });
+            
+            return json;
+        }
+
+        // Set up tab navigation
+        function setupTabNavigation() {
+            // Update navigation visibility based on active tab
+            const tabList = [
+                {tab: basicsTab, nav: basicsNav, badge: basicsTab.querySelector('.badge')},
+                {tab: referencesTab, nav: referencesNav, badge: referencesTab.querySelector('.badge')},
+                {tab: thoughtsTab, nav: thoughtsNav, badge: thoughtsTab.querySelector('.badge')},
+                {tab: advancedTab, nav: advancedNav, badge: advancedTab.querySelector('.badge')}
+            ];
+            
+            // Initially, make sure only the active tab's navigation is visible
+            function updateNavigationVisibility() {
+                // First hide all navigation
+                tabList.forEach(item => {
+                    item.nav.classList.remove('d-flex');
+                    item.nav.classList.add('d-none');
+                });
+                
+                // Show navigation for active tab
+                for (let i = 0; i < tabList.length; i++) {
+                    if (tabList[i].tab.classList.contains('active')) {
+                        tabList[i].nav.classList.remove('d-none');
+                        tabList[i].nav.classList.add('d-flex');
+                        break;
+                    }
+                }
+            }
+            
+            // Set initial visibility
+            updateNavigationVisibility();
+            
+            // Update when tabs are shown
+            tabList.forEach(item => {
+                item.tab.addEventListener('shown.bs.tab', function() {
+                    updateNavigationVisibility();
+                });
+            });
+            
+            // Check if basics section is valid
+            function isBasicsSectionValid() {
+                const topic = document.getElementById('topic').value.trim();
+                const audience = document.getElementById('audience').value.trim();
+                return topic !== '' && audience !== '';
+            }
+            
+            // Mark tab as completed
+            function markTabAsCompleted(tabIndex) {
+                if (tabIndex >= 0 && tabIndex < tabList.length) {
+                    const badge = tabList[tabIndex].badge;
+                    if (badge) {
+                        badge.classList.remove('bg-secondary');
+                        badge.classList.add('bg-success');
+                    }
+                }
+            }
+            
+            // Set up button click handlers
+            const basicsNextBtn = document.getElementById('basics-next-btn');
+            const referencesNextBtn = document.getElementById('references-next-btn');
+            const referencesPrevBtn = document.getElementById('references-prev-btn');
+            const thoughtsNextBtn = document.getElementById('thoughts-next-btn');
+            const thoughtsPrevBtn = document.getElementById('thoughts-prev-btn');
+            const advancedGenerateBtn = document.getElementById('advanced-generate-btn');
+            const advancedPrevBtn = document.getElementById('advanced-prev-btn');
+            
+            // Initialize Bootstrap tabs
+            const tabObjects = {};
+            [basicsTab, referencesTab, thoughtsTab, advancedTab].forEach(tabEl => {
+                if (tabEl) {
+                    tabObjects[tabEl.id] = new bootstrap.Tab(tabEl);
+                }
+            });
+            
+            // Function to safely activate a tab
+            function activateTab(tabId) {
+                // Get the element
+                const tabElement = document.getElementById(tabId);
+                if (!tabElement) {
+                    console.error('Tab element not found:', tabId);
+                    return;
+                }
+                
+                // Create a direct click event
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                
+                // Dispatch the event to properly trigger Bootstrap's tab handling
+                tabElement.dispatchEvent(clickEvent);
+            }
+            
+            // Basics Next button
+            if (basicsNextBtn) {
+                basicsNextBtn.addEventListener('click', function() {
+                    if (isBasicsSectionValid()) {
+                        markTabAsCompleted(0);
+                        activateTab('references-tab');
+                    } else {
+                        alert('Please fill in both the Topic and Target Audience fields before continuing.');
+                    }
+                });
+            }
+            
+            // References Back button
+            if (referencesPrevBtn) {
+                referencesPrevBtn.addEventListener('click', function() {
+                    activateTab('basics-tab');
+                });
+            }
+            
+            // References Next button
+            if (referencesNextBtn) {
+                referencesNextBtn.addEventListener('click', function() {
+                    markTabAsCompleted(1);
+                    activateTab('thoughts-tab');
+                });
+            }
+            
+            // Thoughts Back button
+            if (thoughtsPrevBtn) {
+                thoughtsPrevBtn.addEventListener('click', function() {
+                    activateTab('references-tab');
+                });
+            }
+            
+            // Thoughts Next button
+            if (thoughtsNextBtn) {
+                thoughtsNextBtn.addEventListener('click', function() {
+                    markTabAsCompleted(2);
+                    activateTab('advanced-tab');
+                });
+            }
+            
+            // Advanced Back button
+            if (advancedPrevBtn) {
+                advancedPrevBtn.addEventListener('click', function() {
+                    activateTab('thoughts-tab');
+                });
+            }
+            
+            // Generate button for Advanced tab
+            if (advancedGenerateBtn) {
+                advancedGenerateBtn.addEventListener('click', function() {
+                    if (isBasicsSectionValid()) {
+                        markTabAsCompleted(3);
+                        progressSection.style.display = 'block';
+                        generateButton.click();
+                    } else {
+                        alert('Please ensure the Topic and Target Audience are filled in before generating.');
+                        activateTab('basics-tab');
+                    }
+                });
+            }
+            
+            // Validate when clicking directly on tabs
+            [referencesTab, thoughtsTab, advancedTab].forEach((tab, index) => {
+                if (tab) {
+                    tab.addEventListener('show.bs.tab', function(event) {
+                        if (!isBasicsSectionValid()) {
+                            event.preventDefault();
+                            alert('Please fill in both the Topic and Target Audience fields first.');
+                            setTimeout(() => activateTab('basics-tab'), 50);
+                            return;
+                        }
+                        
+                        // Mark previous tabs as completed
+                        for (let i = 0; i < index + 1; i++) {
+                            markTabAsCompleted(i);
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Initialize tab navigation
+        setupTabNavigation();
+    });
+</script>
+
+<style>
+    /* Modern UI styling inspired by Material UI and shadcn/ui */
+    :root {
+        --primary-color: #3b82f6;
+        --primary-hover: #2563eb;
+        --bg-card: #ffffff;
+        --bg-subtle: #f9fafb;
+        --text-primary: #111827;
+        --text-secondary: #4b5563;
+        --border-color: #e5e7eb;
+        --success-color: #10b981;
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --transition-base: all 0.2s ease;
+    }
+
+    /* Card styling */
+    .card {
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition-base);
+        border: 1px solid var(--border-color);
+    }
+
+    .card:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Form controls */
+    .form-control, .form-select {
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-color);
+        padding: 0.625rem 1rem;
+        transition: var(--transition-base);
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Button styling */
+    .btn {
+        border-radius: var(--radius-md);
+        font-weight: 500;
+        padding: 0.625rem 1.25rem;
+        transition: var(--transition-base);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: var(--primary-hover);
+        border-color: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Tab styling */
+    .nav-tabs {
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+    }
+
+    .nav-tabs .nav-link {
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        border: 1px solid transparent;
+        transition: var(--transition-base);
+    }
+
+    .nav-tabs .nav-link:hover {
+        background-color: rgba(59, 130, 246, 0.05);
+        border-color: transparent;
+    }
+
+    .nav-tabs .nav-link.active {
+        border-color: var(--border-color) var(--border-color) #fff;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .nav-link .badge {
+        font-size: 0.875rem;
+        font-weight: 600;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    .badge.bg-primary {
+        background-color: var(--primary-color) !important;
+    }
+
+    .badge.bg-success {
+        background-color: var(--success-color) !important;
+    }
+
+    .badge.bg-secondary {
+        background-color: #9ca3af !important;
+    }
+
+    /* Navigation buttons styling */
+    #tab-navigation .btn.rounded-pill {
+        border-radius: 9999px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #tab-navigation .btn-primary.rounded-pill:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    #tab-navigation .btn-primary.rounded-pill:active {
+        transform: translateY(0);
+    }
+
+    /* Progress section */
+    #progressSection .progress {
+        height: 0.5rem;
+        border-radius: var(--radius-lg);
+        background-color: var(--bg-subtle);
+    }
+
+    #statusMessages {
+        max-height: 150px;
+        overflow-y: auto;
+        border-radius: var(--radius-sm);
+        padding: 0.5rem;
+        background-color: var(--bg-subtle);
+    }
+    
+    .status-message {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .status-message:last-child {
+        border-bottom: none;
+    }
+    
+    /* Reference item styling */
+    .reference-item {
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        transition: var(--transition-base);
+    }
+    
+    .reference-item:hover {
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* JSON syntax highlighting */
+    .json-code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+    }
+    
+    .json-key {
+        color: #3b82f6;
+        font-weight: 500;
+    }
+    
+    .json-string {
+        color: #059669;
+    }
+    
+    .json-number {
+        color: #dc2626;
+    }
+    
+    .json-boolean {
+        color: #7c3aed;
+        font-weight: 500;
+    }
+
+    /* Integration Notes - For documentation purposes only */
+    /*
+    To fully integrate Material UI or shadcn/ui:
+    
+    1. Material UI Integration:
+       - Install: npm install @mui/material @emotion/react @emotion/styled
+       - Add theme provider to the React app
+       - Replace Bootstrap components with MUI components
+    
+    2. shadcn/ui Integration:
+       - Install Tailwind CSS: npm install -D tailwindcss postcss autoprefixer
+       - Initialize Tailwind: npx tailwindcss init -p
+       - Install shadcn components: npx shadcn-ui@latest init
+       - Add components as needed: npx shadcn-ui@latest add button card tabs
+       
+    3. For both options, transition from Flask templates to a React/Next.js 
+       frontend that consumes Flask API endpoints
+    */
+</style>
+{% endblock %}
+{% endblock content %}
