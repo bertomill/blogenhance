@@ -3,8 +3,10 @@ from dotenv import load_dotenv
 from flask_talisman import Talisman
 from flask_login import LoginManager
 from app.models import db, User, get_user
+from flask_migrate import Migrate
 import os
 from datetime import datetime
+from sqlalchemy import inspect
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -18,6 +20,9 @@ def create_app(test_config=None):
     
     # Initialize database
     db.init_app(app)
+    
+    # Initialize Flask-Migrate
+    migrate = Migrate(app, db)
     
     # For development, we'll simply disable CSP
     # In production, you would want to set up proper CSP rules
@@ -38,22 +43,31 @@ def create_app(test_config=None):
     
     # Create tables if they don't exist
     with app.app_context():
-        db.create_all()
-        # Create default admin user if no users exist
-        if not User.query.first():
-            admin = User(
-                username='admin',
-                email='admin@example.com'
-            )
-            admin.set_password('adminpassword')
-            admin.update_profile({
-                'personality': 'thoughtful and analytical',
-                'writing_style': 'clear and conversational',
-                'expertise': 'digital marketing and content strategy',
-                'background': 'Several years of experience in content creation and blog management'
-            })
-            db.session.add(admin)
-            db.session.commit()
+        # Don't create tables here since we're using migrations
+        # db.create_all()
+        
+        # For first time setup, check if users table exists and has any users
+        try:
+            # If no users exist and the table is successfully queried, create a default admin
+            inspector = inspect(db.engine)
+            if inspector.has_table('users') and not User.query.first():
+                admin = User(
+                    username='admin',
+                    email='admin@example.com'
+                )
+                admin.set_password('adminpassword')
+                admin.update_profile({
+                    'personality': 'thoughtful and analytical',
+                    'writing_style': 'clear and conversational',
+                    'expertise': 'digital marketing and content strategy',
+                    'background': 'Several years of experience in content creation and blog management'
+                })
+                db.session.add(admin)
+                db.session.commit()
+        except Exception as e:
+            # If there's an error (like missing columns), we'll handle it with migrations
+            print(f"Database initialization error: {e}")
+            print("Run 'flask db migrate' and 'flask db upgrade' to update the database schema")
     
     from app.routes import main_bp
     app.register_blueprint(main_bp)
