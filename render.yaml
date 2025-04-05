@@ -12,7 +12,11 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:///blog_enhance.db
+        fromDatabase:
+          name: blogenhance-db
+          property: connectionString
+      - key: FLASK_ENV
+        value: production
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: OPENAI_API_KEY
@@ -26,4 +30,8 @@ services:
       - key: STRIPE_PRO_PRICE_ID
         sync: false
       - key: STRIPE_ENTERPRISE_PRICE_ID
-        sync: false 
+        sync: false
+
+databases:
+  - name: blogenhance-db
+    plan: free 

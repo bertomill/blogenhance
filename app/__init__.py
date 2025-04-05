@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 from sqlalchemy import inspect
 from pathlib import Path
+import re
 
 # Load environment variables from .env file if it exists
 env_path = Path('.') / '.env'
@@ -22,7 +23,17 @@ def create_app(test_config=None):
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-goes-here')
     
     # Configure database
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///blog_enhance.db')
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Handle Render postgres:// vs postgresql:// issue
+        # Render uses postgres:// which needs to be converted to postgresql:// for SQLAlchemy
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        # Fallback to SQLite for local development
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///blog_enhance.db'
+    
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     # Initialize database

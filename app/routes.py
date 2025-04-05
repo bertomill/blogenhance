@@ -6,16 +6,17 @@ from app.blog_generator import generate_blog_post
 from app.image_generator import generate_cover_image, generate_meme_image
 import markdown
 import bleach
-from bleach.sanitizer import ALLOWED_TAGS, ALLOWED_ATTRIBUTES
+from bleach.sanitizer import ALLOWED_TAGS as DEFAULT_TAGS, ALLOWED_ATTRIBUTES as DEFAULT_ATTRIBUTES
 from app.models import db, BlogPost
 import re
 import json
 
 main_bp = Blueprint('main', __name__)
 
-# Add additional allowed HTML tags for richer formatting
-ALLOWED_TAGS.extend(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'span', 'img', 'hr', 'br'])
+# Create a new set with additional allowed HTML tags for richer formatting
+ALLOWED_TAGS = list(DEFAULT_TAGS) + ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'span', 'img', 'hr', 'br']
 # Add additional allowed attributes
+ALLOWED_ATTRIBUTES = DEFAULT_ATTRIBUTES.copy()
 ALLOWED_ATTRIBUTES.update({
     'img': ['src', 'alt', 'title', 'width', 'height', 'class'],
     'a': ['href', 'title', 'target', 'rel', 'class'],

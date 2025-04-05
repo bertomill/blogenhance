@@ -13,4 +13,5 @@ jinja2==3.1.2
 itsdangerous==2.2.0
 sqlalchemy==2.0.23
 stripe==7.13.0
-gunicorn==20.1.0 
+gunicorn==20.1.0
+psycopg2-binary==2.9.9 
